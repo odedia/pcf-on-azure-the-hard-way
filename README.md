@@ -294,7 +294,7 @@ echo tenant_id             = \"`az account list | jq -r .[0].tenantId`\" >> terr
 echo client_id             = \"`az ad app show --id http://${USER_ID}BOSHAzureCPI | jq -r .appId`\" >> terraform.tfvars
 echo client_secret         = \"${CLIENT_SECRET}\"  >> terraform.tfvars
 
-echo env_name              = \"${PCF_PROJECT_ID}\"   >> terraform.tfvars
+echo env_name              = \"${PCF_SUBDOMAIN_NAME}\"   >> terraform.tfvars
 echo location              = \"East US\" >> terraform.tfvars
 
 RELEASE_JSON=$(curl \
