@@ -289,13 +289,13 @@ touch terraform.tfvars
 Edit the terraform file with the following parameters:
 
 ```
-echo subscription_id       = "`az account list | jq -r .[0].id`" >> terraform.tfvars
-echo tenant_id             = "`az account list | jq -r .[0].tenantId`" >> terraform.tfvars
-echo client_id             = "`az ad app show --id http://${USER_ID}BOSHAzureCPI | jq -r .appId`" >> terraform.tfvars
-echo client_secret         = "${CLIENT_SECRET}"  >> terraform.tfvars
+echo subscription_id       = \"`az account list | jq -r .[0].id`\" >> terraform.tfvars
+echo tenant_id             = \"`az account list | jq -r .[0].tenantId`\" >> terraform.tfvars
+echo client_id             = \"`az ad app show --id http://${USER_ID}BOSHAzureCPI | jq -r .appId`\" >> terraform.tfvars
+echo client_secret         = \"${CLIENT_SECRET}\"  >> terraform.tfvars
 
-echo env_name              = "${PCF_PROJECT_ID}"   >> terraform.tfvars
-echo location              = "East US"
+echo env_name              = \"${PCF_PROJECT_ID}\"   >> terraform.tfvars
+echo location              = \"East US\" >> terraform.tfvars
 
 RELEASE_JSON=$(curl \
     --fail \
@@ -327,12 +327,13 @@ curl \
   --header "Authorization: Bearer ${PIVNET_ACCESS_TOKEN}" \
   ${URL}
 
-echo ops_manager_image_uri = `cat *onAzure.yml | grep east_us | sed 's/east_us: //'` >> terraform.tfvars
+echo ops_manager_image_uri = \"`cat *onAzure.yml | grep east_us | sed 's/east_us: //'`\" >> terraform.tfvars
 rm *onAzure.yml
 
-echo dns_suffix            = "${PCF_DOMAIN_NAME}" >> terraform.tfvars
-echo vm_admin_username     = "admin" >> terraform.tfvars
-echo isolation_segment 	  = "true" >> terraform.tfvars
+echo dns_suffix            = \"${PCF_DOMAIN_NAME}\" >> terraform.tfvars
+echo vm_admin_username     = \"admin\" >> terraform.tfvars
+echo isolation_segment 	  = \"true\" >> terraform.tfvars
+echo env_short_name = \"pcf${USER_ID}\" >> terraform.tfvars
 ```
 
 Inspect `terraform.tfvars` to confirm the settings look ok.
@@ -342,7 +343,7 @@ Init terraform:
 ```
 terraform init
 terraform plan -out=plan  #provide a UNIQUE env short name value if requested, otherwise storage accounts creation might fail. for example pcfodedia
-terraform apply plan
+terraform apply plan --auto-approve
 ```
 
 When terraform installation is complete, setup the DNS records in your google domain provider as type NS. Look at the `terraform output` and find the section for `env_dns_zone_name_servers`. For example:
