@@ -34,7 +34,7 @@ ssh azureuser@`az vm list-ip-addresses \
                -o tsv`
 ```
 
-Tip: if you want to connect from another machine, you will need to copy the ssh keys from the original machine to new machine. The keys must be protected with 0600 unix permissions:
+Tip: if you want to connect from another machine, you will need to copy the ssh keys from the original machine to the new machine. The keys must be protected with 0600 unix permissions:
 
 ```
 sudo chmod 600 ~/.ssh/id_rsa         
