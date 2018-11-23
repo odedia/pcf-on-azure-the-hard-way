@@ -328,11 +328,14 @@ curl \
   ${URL}
 
 echo ops_manager_image_uri = `cat *onAzure.yml | grep east_us | sed 's/east_us: //'` >> terraform.tfvars
+rm *onAzure.yml
 
 echo dns_suffix            = "${PCF_DOMAIN_NAME}" >> terraform.tfvars
 echo vm_admin_username     = "admin" >> terraform.tfvars
 echo isolation_segment 	  = "true" >> terraform.tfvars
 ```
+
+Inspect `terraform.tfvars` to confirm the settings look ok.
 
 Init terraform:
 
