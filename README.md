@@ -14,18 +14,23 @@ Install Azure CLI from https://docs.microsoft.com/en-us/cli/azure/install-azure-
 `az group create --name pcf-azure --location eastus`
 
 ```
-az vm create \
-  --resource-group pcf-azure \
-  --name jumpbox \
-  --image UbuntuLTS \
-  --admin-username azureuser \
-  --data-disk-sizes-gb 200 \
-  --generate-ssh-keys
-  ```
+az vm create   \
+--resource-group pcf-azure   \
+--name jumpbox   \
+--image UbuntuLTS   \
+--admin-username azureuser   \
+--data-disk-sizes-gb 200   \
+--generate-ssh-keys   \
+--vnet-address-prefix 10.0.15.0/16 \
+--subnet-address-prefix 10.0.15.0/24 \
+--private-ip-address 10.0.15.4  
+```
+
+Verify:
+
+`az vm list`
   
-  `az vm list`
-  
-  This one is a bit ridicilous but the only way I found to ssh dynamically into the jumpbox (pull-request a better way, please!):
+This one is a bit ridicilous but the only way I found to ssh dynamically into the jumpbox (pull-request a better way, please!):
   
 ```
 ssh azureuser@`az vm list-ip-addresses \
@@ -67,23 +72,30 @@ sudo apt-key --keyring /etc/apt/trusted.gpg.d/Microsoft.gpg adv \
      --recv-keys BC528686B50D79E339D3721CEB3E94ADBE1229CF
 
 sudo apt-get update
+
 sudo apt-get install azure-cli
+
 sudo apt --yes install unzip
+
 sudo apt --yes install jq
+
 wget -O terraform.zip https://releases.hashicorp.com/terraform/0.11.8/terraform_0.11.8_linux_amd64.zip && \
   unzip terraform.zip && \
   sudo mv terraform /usr/local/bin
+
 wget -O om https://github.com/pivotal-cf/om/releases/download/0.41.0/om-linux && \
   chmod +x om && \
   sudo mv om /usr/local/bin/
+
 wget -O bosh https://s3.amazonaws.com/bosh-cli-artifacts/bosh-cli-5.3.1-linux-amd64 && \
   chmod +x bosh && \
   sudo mv bosh /usr/local/bin/
+
 wget -O /tmp/bbr.tar https://github.com/cloudfoundry-incubator/bosh-backup-and-restore/releases/download/v1.2.8/bbr-1.2.8.tar && \
   tar xvC /tmp/ -f /tmp/bbr.tar && \
   sudo mv /tmp/releases/bbr /usr/local/bin/
-
 ```
+
 `az login`
 
 create .env file:
@@ -297,7 +309,42 @@ The numbers above correspond to the following:
 3. `az ad app show --id http://${USER_ID}BOSHAzureCPI | jq -r .appId`
 4. $CLIENT_SECRET
 5. $PCF_PROJECT_ID
-6. Get the download link from the Azure PDF at this link "Pivotal Cloud Foundry Ops Manager for Azure": https://network.pivotal.io/products/ops-manager/
+6. Run as follows:
+
+```
+RELEASE_JSON=$(curl \
+    --fail \
+    "https://network.pivotal.io/api/v2/products/ops-manager/releases/latest")
+
+EULA_ACCEPTANCE_URL=$(echo ${RELEASE_JSON} |\
+  jq -r '._links.eula_acceptance.href')
+
+curl \
+  --fail \
+  --header "Authorization: Bearer ${PIVNET_ACCESS_TOKEN}" \
+  --request POST \
+  ${EULA_ACCEPTANCE_URL}
+
+
+DOWNLOAD_ELEMENT=$(echo ${RELEASE_JSON} |\
+  jq -r '.product_files[] | select(.aws_object_key | contains("onAzure.yml"))')
+
+FILENAME=$(echo ${DOWNLOAD_ELEMENT} |\
+  jq -r '.aws_object_key | split("/") | last')
+
+URL=$(echo ${DOWNLOAD_ELEMENT} |\
+  jq -r '._links.download.href')
+
+curl \
+  --fail \
+  --location \
+  --output ${FILENAME} \
+  --header "Authorization: Bearer ${PIVNET_ACCESS_TOKEN}" \
+  ${URL}
+
+cat *onAzure.yml | grep east_us
+
+```
 7. your domain name (like example.com). I strongly recommend you'll register your own domain at https://domains.google
 8. If you need isolation segments for your installation, set to true, otherwise false.
 
@@ -309,7 +356,7 @@ terraform plan -out=plan  #provide a UNIQUE env short name value if requested, o
 terraform apply plan
 ```
 
-When terraform installation is complete, setup the DNS records in your google domain provider as type NS. Look at the terraform output and find the section for `env_dns_zone_name_servers`. For example:
+When terraform installation is complete, setup the DNS records in your google domain provider as type NS. Look at the `terraform output` and find the section for `env_dns_zone_name_servers`. For example:
 
 ```
 env_dns_zone_name_servers = [
@@ -320,7 +367,7 @@ env_dns_zone_name_servers = [
 ]
 ```
 
-Set these records in google domains. The name should be your PCF_SUBDOMAIN_NAME. The type should be NS. the nameservers are taken from env_dns_zone_name_servers.
+Set these records in google domains. The name should be your PCF_SUBDOMAIN_NAME. The type should be NS. the nameservers are taken from `env_dns_zone_name_servers`.
 
 You will need to wait until the changes are propegated to your DNS provider. Use the following command to flush your local DNS cache (on macOS):
 
@@ -333,7 +380,7 @@ Use the following command to query if your DNS entry is propegated:
 ```
 nslookup
 >set q=NS
->subdomain.domain.dom
+>subdomain.domain.dom (change to your values)
 ```
 
 Once there is a proper response for the above command, you can continue.
