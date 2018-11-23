@@ -95,9 +95,9 @@ PCF_DOMAIN_NAME=<redacted>        # e.g. example.com
 PCF_SUBDOMAIN_NAME=pcf
 PCF_OPSMAN_ADMIN_PASSWD=<choose secure admin password>
 
-PCF_PROJECT_ID=$(az group list | jq -r .[0].name)
+PCF_PROJECT_ID=<redacted>         #get using: az group list | jq -r .[0].name
 PCF_OPSMAN_FQDN=pcf.${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}
-USER_ID=odedia #change to match your user, this is for unique service account name creation
+USER_ID=<user> #change to match your user, this is for unique service account name creation
 CLIENT_SECRET=<choose secure password>
 ```
 source the .env file and add to the env of .bashrc:
