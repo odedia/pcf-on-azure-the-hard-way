@@ -3,9 +3,9 @@ Installation instructions for PCF on Azure with as minimal UI interaction as pos
 
 Install Azure CLI from https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
-`az cloud set --name AzureCloud`
-
 `az clear` (clears previous cache of logins!)
+
+`az cloud set --name AzureCloud`
 
 `az login`
 
@@ -25,7 +25,7 @@ az vm create \
   
   `az vm list`
   
-  This one is a bit ridicilous but the only way I found to ssh dynamically into the jumpbox (pull-request a bettwer way, please!):
+  This one is a bit ridicilous but the only way I found to ssh dynamically into the jumpbox (pull-request a better way, please!):
   
 ```
 ssh azureuser@`az vm list-ip-addresses \
