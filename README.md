@@ -91,13 +91,13 @@ create .env file:
 ```
 
 PCF_PIVNET_UAA_TOKEN=<redacted>   # see https://network.pivotal.io/users/dashboard/edit-profile
-PCF_DOMAIN_NAME=<redacted>        # e.g. example.com
-PCF_SUBDOMAIN_NAME=pcf
+PCF_DOMAIN_NAME=<redacted>        # buy one for cheap on domains.google (~10$ a year)
+PCF_SUBDOMAIN_NAME=<redacted>     # choose a subdomain name, for example "pcf" or "azure"
 PCF_OPSMAN_ADMIN_PASSWD=<choose secure admin password>
 
 PCF_PROJECT_ID=<redacted>         #get using: az group list | jq -r .[0].name
 PCF_OPSMAN_FQDN=pcf.${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}
-USER_ID=<user> #change to match your user, this is for unique service account name creation
+USER_ID=<user> #change to match your user (odedia for example), this is for unique service account name creation
 CLIENT_SECRET=<choose secure password>
 ```
 source the .env file and add to the env of .bashrc:
@@ -116,7 +116,7 @@ az ad app create \
 --identifier-uris "http://${USER_ID}BOSHAzureCPI"```
 ```
 
-(Tip: if you even need to delete the AAD use this: `az ad app delete --id "http://${USER_ID}BOSHAzureCPI"`)
+(Tip: if you ever need to delete the AAD use this: `az ad app delete --id "http://${USER_ID}BOSHAzureCPI"`)
 
 Create a service principal from the AAD:
 
@@ -145,14 +145,7 @@ az login \
 --service-principal \
 --tenant `az account list | jq -r .[0].tenantId`
 ```
-Once confirmed, logout and login again to your regular azure account:
-
-```
-az logout
-az login
-```
-
-Register compute, network and storage access:
+Once confirmed, enable compute, netowrk and storage access:
 
 ```
 az provider register --namespace Microsoft.Storage
@@ -160,6 +153,12 @@ az provider register --namespace Microsoft.Network
 az provider register --namespace Microsoft.Compute
 ```
 
+logout and login again to your regular azure account:
+
+```
+az logout
+az login
+```
 Create a self-signed certificate for installation:
 
 ```
@@ -174,7 +173,7 @@ distinguished_name = dn
 [ dn ]
 C=IL
 ST=Israel
-L=Beer Sheca
+L=Tel Aviv
 O=Oded Shopen
 OU=DEMO
 CN = ${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}
@@ -201,7 +200,7 @@ openssl req -x509 \
   -config ./${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}.cnf
 ```
 
-Set variables from pivotal network. For example, using this URL https://network.pivotal.io/products/elastic-runtime/#/releases/220833 we can interpolate the following:
+Set variables for PAS installation from pivotal network. For example, using this URL https://network.pivotal.io/products/elastic-runtime/#/releases/220833 we can interpolate the following:
 ```
 PRODUCT_SLUG="elastic-runtime"
 RELEASE_ID="220833"
@@ -283,12 +282,12 @@ tenant_id             = "<2>"
 client_id             = "<3>"
 client_secret         = "<4>"
 
-env_name              = "pcf"
+env_name              = "<5>"
 location              = "East US"
-ops_manager_image_uri = "<5>"
-dns_suffix            = "<6>"
+ops_manager_image_uri = "<6>"
+dns_suffix            = "<7>"
 vm_admin_username     = "admin"
-isolation_segment 	  = "<7>"
+isolation_segment 	  = "<8>"
 ```
 
 The numbers above correspond to the following:
@@ -297,19 +296,20 @@ The numbers above correspond to the following:
 2. `az account list | jq -r .[0].tenantId`
 3. `az ad app show --id http://${USER_ID}BOSHAzureCPI | jq -r .appId`
 4. $CLIENT_SECRET
-5. Get the download link from the Azure PDF at this link "Pivotal Cloud Foundry Ops Manager for Azure": https://network.pivotal.io/products/ops-manager/
-6. your domain name (like example.com). I strongly recommend you'll register your own domain at https://domains.google
-7. If you need isolation segments for your installation, set to true, otherwise false.
+5. $PCF_PROJECT_ID
+6. Get the download link from the Azure PDF at this link "Pivotal Cloud Foundry Ops Manager for Azure": https://network.pivotal.io/products/ops-manager/
+7. your domain name (like example.com). I strongly recommend you'll register your own domain at https://domains.google
+8. If you need isolation segments for your installation, set to true, otherwise false.
 
 Init terraform:
 
 ```
 terraform init
-terraform plan -out=plan  #provide a UNIQUE env short name value, otherwise storage accounts creation might fail. for example pcfodedia
+terraform plan -out=plan  #provide a UNIQUE env short name value if requested, otherwise storage accounts creation might fail. for example pcfodedia
 terraform apply plan
 ```
 
-When terraform installation is complete, setup the DNS records in your google domain provider as type NS. Look at the terraform output and find the section for env_dns_zone_name_servers. For example:
+When terraform installation is complete, setup the DNS records in your google domain provider as type NS. Look at the terraform output and find the section for `env_dns_zone_name_servers`. For example:
 
 ```
 env_dns_zone_name_servers = [
