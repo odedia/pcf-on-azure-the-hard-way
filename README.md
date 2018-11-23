@@ -308,3 +308,50 @@ terraform init
 terraform plan -out=plan  #provide a UNIQUE env short name value, otherwise storage accounts creation might fail. for example pcfodedia
 terraform apply plan
 ```
+
+When terraform installation is complete, setup the DNS records in your google domain provider as type NS. Look at the terraform output and find the section for env_dns_zone_name_servers. For example:
+
+```
+env_dns_zone_name_servers = [
+    ns2-03.azure-dns.net.,
+    ns3-03.azure-dns.org.,
+    ns1-03.azure-dns.com.,
+    ns4-03.azure-dns.info.
+]
+```
+
+Set these records in google domains. The name should be your PCF_SUBDOMAIN_NAME. The type should be NS. the nameservers are taken from env_dns_zone_name_servers.
+
+You will need to wait until the changes are propegated to your DNS provider. Use the following command to flush your local DNS cache (on macOS):
+
+```
+sudo killall -HUP mDNSResponder
+```
+
+Use the following command to query if your DNS entry is propegated:
+
+```
+nslookup
+>set q=NS
+>subdomain.domain.dom
+```
+
+Once there is a proper response for the above command, you can continue.
+
+Go to the value of $PCF_OPSMAN_FQDN and go to that URL in your browser.
+
+Choose internal authentication.
+
+username - admin
+password - the value of $PCF_OPSMAN_ADMIN_PASSWD
+decryption key = choose a secure key, and SAVE IT IN A SECURE LOCATION! your environment is dead without this key.
+
+
+Set the properties under "Azure Config" as follows:
+
+Subscription ID:  `az account list | jq -r .[0].id`
+Tenant ID: `az account list | jq -r .[0].tenantId`
+Application ID: `az ad app show --id http://${USER_ID}BOSHAzureCPI | jq -r .appId`
+Client Secret: value of $CLIENT_SECRET
+Resource Group Name: value of $PCF_PROJECT_ID
+BOSH Storage Account Name: Find under azure portal, it should be the unique env short name you provided to terraform followed by "director". for example pcfodediadirector
