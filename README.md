@@ -342,7 +342,7 @@ Init terraform:
 
 ```
 terraform init
-terraform plan -out=plan  #provide a UNIQUE env short name value if requested, otherwise storage accounts creation might fail. for example pcfodedia
+terraform plan -out=plan
 terraform apply --auto-approve
 ```
 
