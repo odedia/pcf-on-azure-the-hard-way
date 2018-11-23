@@ -343,7 +343,7 @@ Init terraform:
 ```
 terraform init
 terraform plan -out=plan  #provide a UNIQUE env short name value if requested, otherwise storage accounts creation might fail. for example pcfodedia
-terraform apply plan --auto-approve
+terraform apply --auto-approve
 ```
 
 When terraform installation is complete, setup the DNS records in your google domain provider as type NS. Look at the `terraform output` and find the section for `env_dns_zone_name_servers`. For example:
