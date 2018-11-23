@@ -3,7 +3,7 @@ Installation instructions for PCF on Azure with as minimal UI interaction as pos
 
 Install Azure CLI from https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
-`az clear` (clears previous cache of logins!)
+`az account clear` (clears previous cache of logins!)
 
 `az cloud set --name AzureCloud`
 
