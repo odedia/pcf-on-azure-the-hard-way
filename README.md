@@ -353,5 +353,93 @@ Subscription ID:  `az account list | jq -r .[0].id`
 Tenant ID: `az account list | jq -r .[0].tenantId`
 Application ID: `az ad app show --id http://${USER_ID}BOSHAzureCPI | jq -r .appId`
 Client Secret: value of $CLIENT_SECRET
-Resource Group Name: value of $PCF_PROJECT_ID
-BOSH Storage Account Name: Find under azure portal, it should be the unique env short name you provided to terraform followed by "director". for example pcfodediadirector
+Resource Group Name: value of `terraform output | grep pcf_resource_group_name`
+BOSH Storage Account Name: value of `terraform output | grep bosh_root_storage_account`
+Default Security Group: value of `terraform output | grep bosh_deployed_vms_security_group_name`
+SSH Public key: value of `terraform output | grep ops_manager_ssh_public_key`
+SSH Private key: value of `terraform output` (search for ops_manager_ssh_private_key and copy entire multiline entry)
+
+
+Set the properties for "Director Config" as follows:
+
+NTP Server: `time.google.com`
+BOSH Ressurector: enabled
+
+For Create Networks, do the following:
+
+Create new network for "Management"
+
+Name: Management
+
+NETWORK_NAME --> `terraform output | grep network_name`
+SUBNET_NAME --> `terraform output | grep management_subnet_name`
+CIDR --> `terraform output | grep management_subnet_cidrs` (might not show due to grep, scan output if this is the case)
+
+Azure Network Name: NETWORK_NAME/SUBNET_NAME
+CIDR: from above
+Reserved IP Ranges: First 9 IPs, like 10.0.8.1-10.0.8.9
+DNS: 168.63.129.16
+Gateway: First IP, 10.0.8.1
+
+Create new network for "PAS"
+
+Name: PAS
+
+NETWORK_NAME --> `terraform output | grep network_name`
+SUBNET_NAME --> `terraform output | grep pas_subnet_name`
+CIDR --> `terraform output | grep pas_subnet_cidrs` (might not show due to grep, scan output if this is the case)
+
+Azure Network Name: NETWORK_NAME/SUBNET_NAME
+CIDR: from above
+Reserved IP Ranges: First 9 IPs, like 10.0.0.1-10.0.0.9
+DNS: 168.63.129.16
+Gateway: First IP, like 10.0.0.1
+
+
+Create new network for "Services"
+
+Name: Services
+
+NETWORK_NAME --> `terraform output | grep network_name`
+SUBNET_NAME --> `terraform output | grep services_subnet_name`
+CIDR --> `terraform output | grep services_subnet_cidrs` (might not show due to grep, scan output if this is the case)
+
+Azure Network Name: NETWORK_NAME/SUBNET_NAME
+CIDR: from above
+Reserved IP Ranges: First 9 IPs, like 10.0.4.1-10.0.4.9
+DNS: 168.63.129.16
+Gateway: First IP, like 10.0.4.1
+
+Under "Assign Networks", select "Management" from the drop down.
+
+Under "Security", paste the value of the certificate we created in line 163 (the contents of the file ending with .cert):
+
+```
+-----BEGIN CERTIFICATE-----
+MIIDXjCCAkYCCQD7GjFMvGajMDANBgkqhkiG9w0BAQsFADBxMQswCQYDVQQGEwJJ
+TDEPMA0GA1UECAwGSXNyYWVsMRMwEQYDVQQHDApCZWVyIFNoZWNhMRQwEgYDV...
+-----END CERTIFICATE-----
+```
+
+Under Resource Config, change Master Compilation Job to 8 (for faster compilation).
+
+On main screen, click Apply Changes
+
+While installation continues, you can add the following command to your .bashrc file (at the end!)
+
+```
+export $( \
+  om \
+    --skip-ssl-validation \
+    --target ${PCF_OPSMAN_FQDN} \
+    --username admin \
+    --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+    curl \
+      --silent \
+      --path /api/v0/deployed/director/credentials/bosh_commandline_credentials | \
+        jq --raw-output '.credential' \
+)
+```
+
+This will allow you to communicate with the BOSH director that is now being deployed.
+
