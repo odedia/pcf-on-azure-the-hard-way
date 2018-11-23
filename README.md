@@ -34,6 +34,26 @@ ssh azureuser@`az vm list-ip-addresses \
                -o tsv`
 ```
 
+Tip: if you want to connect from another machine, you will need to copy the ssh keys from the original machine to new machine. The keys must be protected with 0600 unix permissions:
+
+```
+sudo chmod 600 ~/.ssh/id_rsa         
+sudo chmod 600 ~/.ssh/id_rsa.pub    
+```
+
+Usually the key is under ~/.ssh/id_rsa and ~/.ssh/id_rsa.pub but you can use other file names. For example, if the name of the key pair is azure and azure.pub you can connect with the following command:
+
+```
+ssh -i ~/.ssh/azure azureuser@`az vm list-ip-addresses \
+               -n jumpbox \
+               --query [0].virtualMachine.network.publicIpAddresses[0].ipAddress \
+               -o tsv`
+```
+
+From now on - all activites are done on the remote jumpbox.
+-------------------------------
+
+
 Install azure cli and other tools on remote jumpbox:
 
 ```
@@ -116,7 +136,7 @@ Verify role assignment with this command:
 az role assignment list --assignee "http://${USER_ID}BOSHAzureCPI"
 ```
 
-Login to the AAD:
+Make sure the account is valid by logging in to the AAD:
 
 ```
 az login \
@@ -125,6 +145,12 @@ az login \
 --service-principal \
 --tenant `az account list | jq -r .[0].tenantId`
 ```
+Once confirmed, logout and login again to your regular azure account:
+
+```
+az logout
+az login
+```
 
 Register compute, network and storage access:
 
@@ -132,4 +158,153 @@ Register compute, network and storage access:
 az provider register --namespace Microsoft.Storage
 az provider register --namespace Microsoft.Network
 az provider register --namespace Microsoft.Compute
+```
+
+Create a self-signed certificate for installation:
+
+```
+cat > ./${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}.cnf <<-EOF
+[req]
+default_bits = 2048
+prompt = no
+default_md = sha256
+req_extensions = req_ext
+distinguished_name = dn
+
+[ dn ]
+C=IL
+ST=Israel
+L=Beer Sheca
+O=Oded Shopen
+OU=DEMO
+CN = ${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}
+
+[ req_ext ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = *.sys.${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}
+DNS.2 = *.login.sys.${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}
+DNS.3 = *.uaa.sys.${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}
+DNS.4 = *.apps.${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}
+EOF
+```
+
+Generate the key:
+
+```
+openssl req -x509 \
+  -newkey rsa:2048 \
+  -nodes \
+  -keyout ${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}.key \
+  -out ${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}.cert \
+  -config ./${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}.cnf
+```
+
+Set variables from pivotal network. For example, using this URL https://network.pivotal.io/products/elastic-runtime/#/releases/220833 we can interpolate the following:
+```
+PRODUCT_SLUG="elastic-runtime"
+RELEASE_ID="220833"
+```
+Authenticate with Pivnet:
+
+```
+AUTHENTICATION_RESPONSE=$(curl \
+  --fail \
+  --data "{\"refresh_token\": \"${PCF_PIVNET_UAA_TOKEN}\"}" \
+  https://network.pivotal.io/api/v2/authentication/access_tokens)
+```
+
+Get the access token:
+
+`PIVNET_ACCESS_TOKEN=$(echo ${AUTHENTICATION_RESPONSE} | jq -r '.access_token')`
+
+Get the release JSON for the PAS version you want to install:
+
+```
+  RELEASE_JSON=$(curl \
+    --fail \
+    "https://network.pivotal.io/api/v2/products/${PRODUCT_SLUG}/releases/${RELEASE_ID}")
+```
+
+Accept EULA:
+
+```
+EULA_ACCEPTANCE_URL=$(echo ${RELEASE_JSON} |\
+  jq -r '._links.eula_acceptance.href')
+
+curl \
+  --fail \
+  --header "Authorization: Bearer ${PIVNET_ACCESS_TOKEN}" \
+  --request POST \
+  ${EULA_ACCEPTANCE_URL}
+
+```
+
+Extract the terraform download URL for azure:
+
+```
+DOWNLOAD_ELEMENT=$(echo ${RELEASE_JSON} |\
+  jq -r '.product_files[] | select(.aws_object_key | contains("terraforming-azure"))')
+
+FILENAME=$(echo ${DOWNLOAD_ELEMENT} |\
+  jq -r '.aws_object_key | split("/") | last')
+
+URL=$(echo ${DOWNLOAD_ELEMENT} |\
+  jq -r '._links.download.href')
+
+```
+
+Download and unzip:
+
+```
+curl \
+  --fail \
+  --location \
+  --output ${FILENAME} \
+  --header "Authorization: Bearer ${PIVNET_ACCESS_TOKEN}" \
+  ${URL}
+unzip ./${FILENAME}
+cd ./pivotal-cf-terraforming-azure-*/
+cd terraforming-pas
+```
+
+Create tfvars file:
+
+```
+touch terraform.tfvars
+```
+
+Edit the terraform file with the following parameters:
+
+```
+subscription_id       = "<1>"
+tenant_id             = "<2>"
+client_id             = "<3>"
+client_secret         = "<4>"
+
+env_name              = "pcf"
+location              = "East US"
+ops_manager_image_uri = "<5>"
+dns_suffix            = "<6>"
+vm_admin_username     = "admin"
+isolation_segment 	  = "<7>"
+```
+
+The numbers above correspond to the following:
+
+1. `az account list | jq -r .[0].id`
+2. `az account list | jq -r .[0].tenantId`
+3. `az ad app show --id http://${USER_ID}BOSHAzureCPI | jq -r .appId`
+4. $CLIENT_SECRET
+5. Get the download link from the Azure PDF at this link "Pivotal Cloud Foundry Ops Manager for Azure": https://network.pivotal.io/products/ops-manager/
+6. your domain name (like example.com). I strongly recommend you'll register your own domain at https://domains.google
+7. If you need isolation segments for your installation, set to true, otherwise false.
+
+Init terraform:
+
+```
+terraform init
+terraform plan -out=plan  #provide a UNIQUE env short name value, otherwise storage accounts creation might fail. for example pcfodedia
+terraform apply plan
 ```
