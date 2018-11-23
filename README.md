@@ -289,29 +289,14 @@ touch terraform.tfvars
 Edit the terraform file with the following parameters:
 
 ```
-subscription_id       = "<1>"
-tenant_id             = "<2>"
-client_id             = "<3>"
-client_secret         = "<4>"
+echo subscription_id       = "`az account list | jq -r .[0].id`" >> terraform.tfvars
+echo tenant_id             = "`az account list | jq -r .[0].tenantId`" >> terraform.tfvars
+echo client_id             = "`az ad app show --id http://${USER_ID}BOSHAzureCPI | jq -r .appId`" >> terraform.tfvars
+echo client_secret         = "${CLIENT_SECRET}"  >> terraform.tfvars
 
-env_name              = "<5>"
-location              = "East US"
-ops_manager_image_uri = "<6>"
-dns_suffix            = "<7>"
-vm_admin_username     = "admin"
-isolation_segment 	  = "<8>"
-```
+echo env_name              = "${PCF_PROJECT_ID}"   >> terraform.tfvars
+echo location              = "East US"
 
-The numbers above correspond to the following:
-
-1. `az account list | jq -r .[0].id`
-2. `az account list | jq -r .[0].tenantId`
-3. `az ad app show --id http://${USER_ID}BOSHAzureCPI | jq -r .appId`
-4. $CLIENT_SECRET
-5. $PCF_PROJECT_ID
-6. Run as follows:
-
-```
 RELEASE_JSON=$(curl \
     --fail \
     "https://network.pivotal.io/api/v2/products/ops-manager/releases/latest")
@@ -342,11 +327,12 @@ curl \
   --header "Authorization: Bearer ${PIVNET_ACCESS_TOKEN}" \
   ${URL}
 
-cat *onAzure.yml | grep east_us
+echo ops_manager_image_uri = `cat *onAzure.yml | grep east_us | sed 's/east_us: //'` >> terraform.tfvars
 
+echo dns_suffix            = "${PCF_DOMAIN_NAME}" >> terraform.tfvars
+echo vm_admin_username     = "admin" >> terraform.tfvars
+echo isolation_segment 	  = "true" >> terraform.tfvars
 ```
-7. your domain name (like example.com). I strongly recommend you'll register your own domain at https://domains.google
-8. If you need isolation segments for your installation, set to true, otherwise false.
 
 Init terraform:
 
