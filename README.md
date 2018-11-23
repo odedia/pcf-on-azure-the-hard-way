@@ -113,7 +113,7 @@ az ad app create \
 --display-name "Service Principal for BOSH" \
 --password $CLIENT_SECRET \
 --homepage "http://BOSHAzureCPI" \
---identifier-uris "http://${USER_ID}BOSHAzureCPI"```
+--identifier-uris "http://${USER_ID}BOSHAzureCPI"
 ```
 
 (Tip: if you ever need to delete the AAD use this: `az ad app delete --id "http://${USER_ID}BOSHAzureCPI"`)
