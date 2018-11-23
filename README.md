@@ -443,3 +443,6 @@ export $( \
 
 This will allow you to communicate with the BOSH director that is now being deployed.
 
+After "Installing BOSH" section in Ops Manager is done, you can try to get the environment details:
+
+`bosh env`
