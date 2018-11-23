@@ -104,10 +104,9 @@ create .env file:
 
 PCF_PIVNET_UAA_TOKEN=<redacted>   # see https://network.pivotal.io/users/dashboard/edit-profile
 PCF_DOMAIN_NAME=<redacted>        # buy one for cheap on domains.google (~10$ a year)
-PCF_SUBDOMAIN_NAME=<redacted>     # choose a subdomain name, for example "pcf" or "azure"
+PCF_SUBDOMAIN_NAME=<redacted>     # az group list | jq -r .[0].name
 PCF_OPSMAN_ADMIN_PASSWD=<choose secure admin password>
 
-PCF_PROJECT_ID=<redacted>         #get using: az group list | jq -r .[0].name
 PCF_OPSMAN_FQDN=pcf.${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}
 USER_ID=<user> #change to match your user (odedia for example), this is for unique service account name creation
 CLIENT_SECRET=<choose secure password>
