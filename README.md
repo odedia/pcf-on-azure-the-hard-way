@@ -3,16 +3,27 @@ Installation instructions for PCF on Azure with as minimal UI interaction as pos
 
 Install Azure CLI from https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
-`az account clear` (clears previous cache of logins!)
+Clears previous cache of logins if needed:
+
+`az account clear` 
 
 `az cloud set --name AzureCloud`
 
+Login
+
 `az login`
 
-`az account list` Verifies local cache of credentials
+Verify local cache of credentials
+`az account list` 
 
-`az group create --name azure --location eastus`
+Choose a location. I'll use eastus in the examples below.
+LOCATION=eastus
 
+Create resource group:
+
+`az group create --name azure --location $LOCATION`
+
+Create jumpbox VM
 ```
 az vm create   \
 --resource-group azure   \
@@ -21,13 +32,12 @@ az vm create   \
 --admin-username azureuser   \
 --data-disk-sizes-gb 200   \
 --generate-ssh-keys   \
---vnet-address-prefix 10.0.15.0/24 \
---subnet-address-prefix 10.0.15.0/24 \
---private-ip-address 10.0.15.4  
+--vnet-address-prefix 192.168.0.0/16 \
+--subnet-address-prefix 192.168.0.0/16 \
+--private-ip-address 192.168.0.10  
 ```
 
 Verify:
-
 `az vm list`
   
 This one is a bit ridicilous but the only way I found to ssh dynamically into the jumpbox (pull-request a better way, please!):
@@ -90,6 +100,7 @@ wget -O bosh https://s3.amazonaws.com/bosh-cli-artifacts/bosh-cli-5.3.1-linux-am
 wget -O /tmp/bbr.tar https://github.com/cloudfoundry-incubator/bosh-backup-and-restore/releases/download/v1.2.8/bbr-1.2.8.tar && \
   tar xvC /tmp/ -f /tmp/bbr.tar && \
   sudo mv /tmp/releases/bbr /usr/local/bin/
+  
 ```
 
 `az login`
@@ -106,15 +117,15 @@ PCF_OPSMAN_ADMIN_PASSWD=<choose secure admin password>
 PCF_OPSMAN_FQDN=pcf.${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}
 USER_ID=<user> #change to match your user (odedia for example), this is for unique service account name creation
 CLIENT_SECRET=<choose secure password>
+DECRYPT_PHRASE=<choose secure key and save it safely! Your env is dead without this key!>
 ```
 source the .env file and add to the env of .bashrc:
-
 ```
 source ~/.env
 echo "source ~/.env" >> ~/.bashrc
 ```
-Create an Azure Active Directory application (AAD) for BOSH:
 
+Create an Azure Active Directory application (AAD) for BOSH:
 ```
 az ad app create \
 --display-name "Service Principal for BOSH" \
@@ -341,7 +352,7 @@ terraform plan -out=plan
 terraform apply --auto-approve
 ```
 
-When terraform installation is complete, setup the DNS records in your google domain provider as type NS. Look at the `terraform output` and find the section for `env_dns_zone_name_servers`. For example:
+When terraform installation is complete, setup the DNS records in your google domain provider as type NS. Look at the `terraform output env_dns_zone_name_servers`. For example:
 
 ```
 env_dns_zone_name_servers = [
@@ -365,7 +376,7 @@ Use the following command to query if your DNS entry is propegated:
 ```
 nslookup
 >set q=NS
->subdomain.domain.dom (change to your values)
+>subdomain.domain.dom (change to your values to match $PCF_SUBDOMAIN_NAME.$PCF_DOMAIN_NAME)
 ```
 
 Once there is a proper response for the above command, you can continue.
@@ -373,7 +384,6 @@ Once there is a proper response for the above command, you can continue.
 Configure opsman authentication using the om cli:
 
 ```
-DECRYPT_PHRASE=<choose secure key and save it safely! Your env is dead without this key!>
 om \
   --target https://$PCF_OPSMAN_FQDN \
   --skip-ssl-validation \
@@ -386,7 +396,7 @@ om \
 
 You can go to the value of $PCF_OPSMAN_FQDN in your browser to see Ops Manager but we'll try to do everything from the command line.
 
-Set the properties under "Azure Config" as follows:
+Set the properties under BOSH director with the following loooooooooooooong command:
 
 ```
 
@@ -459,77 +469,25 @@ om --target https://$PCF_OPSMAN_FQDN --skip-ssl-validation --username admin --pa
     "instances": 8
   }
 }'
+```
+You might want to review the changes in a browser (go to $PCF_OPSMAN_FQDN).
 
+Apply changes. This will take about 10 minutes:
+```
 om --target https://$PCF_OPSMAN_FQDN --skip-ssl-validation --username admin --password $PCF_OPSMAN_ADMIN_PASSWD apply-changes
 ```
 
-Set the properties for "Director Config" as follows:
-
-NTP Server: `time.google.com`
-BOSH Ressurector: enabled
-
-For Create Networks, do the following:
-
-Create new network for "Management"
-
-Name: Management
-
-NETWORK_NAME --> `terraform output network_name`
-SUBNET_NAME --> `terraform output management_subnet_name`
-CIDR --> `terraform output management_subnet_cidrs` (might not show due to grep, scan output if this is the case)
-
-Azure Network Name: NETWORK_NAME/SUBNET_NAME
-CIDR: from above
-Reserved IP Ranges: First 9 IPs, like 10.0.8.1-10.0.8.9
-DNS: 168.63.129.16
-Gateway: First IP, 10.0.8.1
-
-Create new network for "PAS"
-
-Name: PAS
-
-NETWORK_NAME --> `terraform output | grep network_name`
-SUBNET_NAME --> `terraform output | grep pas_subnet_name`
-CIDR --> `terraform output | grep pas_subnet_cidrs` (might not show due to grep, scan output if this is the case)
-
-Azure Network Name: NETWORK_NAME/SUBNET_NAME
-CIDR: from above
-Reserved IP Ranges: First 9 IPs, like 10.0.0.1-10.0.0.9
-DNS: 168.63.129.16
-Gateway: First IP, like 10.0.0.1
-
-
-Create new network for "Services"
-
-Name: Services
-
-NETWORK_NAME --> `terraform output | grep network_name`
-SUBNET_NAME --> `terraform output | grep services_subnet_name`
-CIDR --> `terraform output | grep services_subnet_cidrs` (might not show due to grep, scan output if this is the case)
-
-Azure Network Name: NETWORK_NAME/SUBNET_NAME
-CIDR: from above
-Reserved IP Ranges: First 9 IPs, like 10.0.4.1-10.0.4.9
-DNS: 168.63.129.16
-Gateway: First IP, like 10.0.4.1
-
-Under "Assign Networks", select "Management" from the drop down.
-
-Under "Security", paste the value of the certificate we created in line 163 (the contents of the file ending with .cert):
+Create network peering from the jumpbox to the PCF network:
 
 ```
------BEGIN CERTIFICATE-----
-MIIDXjCCAkYCCQD7GjFMvGajMDANBgkqhkiG9w0BAQsFADBxMQswCQYDVQQGEwJJ
-TDEPMA0GA1UECAwGSXNyYWVsMRMwEQYDVQQHDApCZWVyIFNoZWNhMRQwEgYDV...
------END CERTIFICATE-----
+az network vnet peering create --name jumpbox-peering --remote-vnet azure-virtual-network --resource-group azure --vnet-name jumpboxVNET --allow-forwarded-traffic --allow-gateway-transit --allow-vnet-access
+
+az network vnet peering create --name opsman-peering --remote-vnet jumpboxVNET --resource-group azure --vnet-name azure-virtual-network --allow-forwarded-traffic --allow-gateway-transit --allow-vnet-access
+
+
 ```
 
-Under Resource Config, change Master Compilation Job to 8 (for faster compilation).
-
-On main screen, click Apply Changes
-
-While installation continues, you can add the following command to your .bashrc file (at the end!)
-
+Export the BOSH environment variables:
 ```
 export $( \
   om \
@@ -543,6 +501,25 @@ export $( \
         jq --raw-output '.credential' \
 )
 ```
+Copy the root certificate to the jumpbox:
+
+```
+sudo mkdir -p /var/tempest/workspaces/default
+
+sudo sh -c \
+  "om \
+    --skip-ssl-validation \
+    --target ${PCF_OPSMAN_FQDN} \
+    --username admin \
+    --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+    curl \
+      --silent \
+      --path "/api/v0/security/root_ca_certificate" |
+        jq --raw-output '.root_ca_certificate_pem' \
+          > /var/tempest/workspaces/default/root_ca_certificate"
+
+```
+
 
 This will allow you to communicate with the BOSH director that is now being deployed.
 
