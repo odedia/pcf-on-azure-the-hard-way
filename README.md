@@ -674,7 +674,7 @@ PROPERTIES=$(om \
     
 ```
 
-
+Setup network settings:
 ```
 NETWORK_SETTINGS_JSON=$(cat <<-EOF
 {
@@ -701,7 +701,11 @@ om \
   configure-product \
     --product-name "cf" \
     --product-network "${NETWORK_SETTINGS_JSON}"
+```
 
+Setup other properties:
+
+```
 CERT_PEM=$(cat ~/${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}.cert | awk '{printf "%s\\r\\n", $0}')
 KEY_PEM=$(cat ~/${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}.key | awk '{printf "%s\\r\\n", $0}')
 
