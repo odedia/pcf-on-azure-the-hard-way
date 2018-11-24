@@ -224,7 +224,7 @@ openssl req -x509 \
 Set variables for PAS installation from pivotal network. For example, using this URL https://network.pivotal.io/products/elastic-runtime/#/releases/220833 we can interpolate the following:
 ```
 PRODUCT_SLUG="elastic-runtime"
-RELEASE_ID="220833"
+RELEASE_ID="latest"
 ```
 Authenticate with Pivnet:
 
