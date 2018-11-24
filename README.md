@@ -526,3 +526,86 @@ Verify connectivity:
 bosh env
 ```
 
+Check the BOSH tasks that were executed so far. Not many, yet.
+```
+bosh tasks --recent=30
+```
+
+Inspect the single task that was executed:
+```
+bosh task 1
+```
+
+Inspect the single task in debug mode:
+```
+bosh task 1 --debug
+```
+
+Installing PAS
+--------------
+
+Authenticate:
+
+```
+AUTHENTICATION_RESPONSE=$(curl \
+  --fail \
+  --data "{\"refresh_token\": \"${PCF_PIVNET_UAA_TOKEN}\"}" \
+  https://network.pivotal.io/api/v2/authentication/access_tokens)
+```
+
+Get Token:
+```
+PIVNET_ACCESS_TOKEN=$(echo ${AUTHENTICATION_RESPONSE} | jq -r '.access_token')
+```
+
+Get the latest PAS:
+
+
+```
+cd ~
+
+RELEASE_JSON=$(curl \
+    --fail \
+    "https://network.pivotal.io/api/v2/products/elastic-runtime/releases/latest")
+
+EULA_ACCEPTANCE_URL=$(echo ${RELEASE_JSON} |\
+  jq -r '._links.eula_acceptance.href')
+
+curl \
+  --fail \
+  --header "Authorization: Bearer ${PIVNET_ACCESS_TOKEN}" \
+  --request POST \
+  ${EULA_ACCEPTANCE_URL}
+
+```
+For the Small Footprint installation, use the following:
+```
+DOWNLOAD_ELEMENT=$(echo ${RELEASE_JSON} |\
+  jq -r '.product_files[] | select(.aws_object_key | contains("elastic-runtime/srt"))')
+```
+
+For the full PAS, use the following:
+```
+DOWNLOAD_ELEMENT=$(echo ${RELEASE_JSON} |\
+  jq -r '.product_files[] | select(.aws_object_key | contains("elastic-runtime/cf-2"))')
+```
+
+Extract the download URL:
+```
+FILENAME=$(echo ${DOWNLOAD_ELEMENT} |\
+  jq -r '.aws_object_key | split("/") | last')
+
+URL=$(echo ${DOWNLOAD_ELEMENT} |\
+  jq -r '._links.download.href')
+```
+Download the file:
+```
+curl \
+  --fail \
+  --location \
+  --output ${FILENAME} \
+  --header "Authorization: Bearer ${PIVNET_ACCESS_TOKEN}" \
+  ${URL}
+```
+
+
