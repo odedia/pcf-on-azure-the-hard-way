@@ -843,3 +843,25 @@ om \
         }'
         
 om --target https://$PCF_OPSMAN_FQDN --skip-ssl-validation --username admin --password $PCF_OPSMAN_ADMIN_PASSWD apply-changes
+```
+
+You can CTRL-C (break) the execution in the middle, the installation will continue. You can check the progress in https://$PCF_OPSMAN_FQDN
+
+Inspect bosh tasks while installation is running:
+
+```
+bosh tasks --recent=30
+```
+
+Inspect the single task that was executed:
+```
+bosh task 20
+```
+
+Some tasks might output information about the Cloud Provider Interface (CPI):
+```
+bosh task 20 --cpi
+```
+
+
+
