@@ -385,15 +385,15 @@ decryption key = choose a secure key, and SAVE IT IN A SECURE LOCATION! your env
 
 Set the properties under "Azure Config" as follows:
 
-Subscription ID:  `az account list | jq -r .[0].id`
-Tenant ID: `az account list | jq -r .[0].tenantId`
-Application ID: `az ad app show --id http://${USER_ID}BOSHAzureCPI | jq -r .appId`
+Subscription ID:  ```az account list | jq -r .[0].id```
+Tenant ID: ```az account list | jq -r .[0].tenantId```
+Application ID: ```az ad app show --id http://${USER_ID}BOSHAzureCPI | jq -r .appId```
 Client Secret: value of $CLIENT_SECRET
-Resource Group Name: value of `terraform output | grep pcf_resource_group_name`
-BOSH Storage Account Name: value of `terraform output | grep bosh_root_storage_account`
-Default Security Group: value of `terraform output | grep bosh_deployed_vms_security_group_name`
-SSH Public key: value of `terraform output | grep ops_manager_ssh_public_key`
-SSH Private key: value of `terraform output` (search for ops_manager_ssh_private_key and copy entire multiline entry)
+Resource Group Name: value of ```terraform output | grep pcf_resource_group_name```
+BOSH Storage Account Name: value of ```terraform output | grep bosh_root_storage_account```
+Default Security Group: value of ```terraform output | grep bosh_deployed_vms_security_group_name```
+SSH Public key: value of ```terraform output | grep ops_manager_ssh_public_key```
+SSH Private key: value of ```terraform output``` (search for ops_manager_ssh_private_key and copy entire multiline entry)
 
 
 Set the properties for "Director Config" as follows:
