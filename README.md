@@ -73,11 +73,7 @@ sudo apt-key --keyring /etc/apt/trusted.gpg.d/Microsoft.gpg adv \
 
 sudo apt-get update
 
-sudo apt-get install azure-cli
-
-sudo apt --yes install unzip
-
-sudo apt --yes install jq
+sudo apt-get install azure-cli && sudo apt --yes install unzip && sudo apt --yes install jq
 
 wget -O terraform.zip https://releases.hashicorp.com/terraform/0.11.8/terraform_0.11.8_linux_amd64.zip && \
   unzip terraform.zip && \
