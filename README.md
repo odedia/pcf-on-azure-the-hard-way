@@ -1,5 +1,6 @@
-# PCF on Azure installation instructions
-Installation instructions for PCF on Azure without any UI interaction.
+# PCF on Azure installation instructions using nothing but the command line
+
+Installation instructions for PCF on Azure without any UI interaction (well... you might have to authenticate your azure account)
 
 Install Azure CLI from https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
