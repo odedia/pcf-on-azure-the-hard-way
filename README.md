@@ -370,27 +370,87 @@ nslookup
 
 Once there is a proper response for the above command, you can continue.
 
-Go to the value of $PCF_OPSMAN_FQDN and go to that URL in your browser.
+Configure opsman authentication using the om cli:
 
-Choose internal authentication.
+```
+DECRYPT_PHRASE=<choose secure key and save it safely! Your env is dead without this key!>
+om \
+  --target https://$PCF_OPSMAN_FQDN \
+  --skip-ssl-validation \
+    configure-authentication \
+      --username admin \
+      --password $CLIENT_SECRET \
+      --decryption-passphrase $DECRYPT_PHRASE
 
-username - admin
-password - the value of $PCF_OPSMAN_ADMIN_PASSWD
-decryption key = choose a secure key, and SAVE IT IN A SECURE LOCATION! your environment is dead without this key.
+```
 
+You can go to the value of $PCF_OPSMAN_FQDN in your browser to see Ops Manager but we'll try to do everything from the command line.
 
 Set the properties under "Azure Config" as follows:
 
-Subscription ID:  ```az account list | jq -r .[0].id```
-Tenant ID: ```az account list | jq -r .[0].tenantId```
-Application ID: ```az ad app show --id http://${USER_ID}BOSHAzureCPI | jq -r .appId```
-Client Secret: value of $CLIENT_SECRET
-Resource Group Name: value of ```terraform output | grep pcf_resource_group_name```
-BOSH Storage Account Name: value of ```terraform output | grep bosh_root_storage_account```
-Default Security Group: value of ```terraform output | grep bosh_deployed_vms_security_group_name```
-SSH Public key: value of ```terraform output | grep ops_manager_ssh_public_key```
-SSH Private key: value of ```terraform output``` (search for ops_manager_ssh_private_key and copy entire multiline entry)
+```
 
+om --target https://$PCF_OPSMAN_FQDN --skip-ssl-validation --username admin --password $CLIENT_SECRET \
+    configure-director \
+      --director-configuration '{
+        "ntp_servers_string": "us.pool.ntp.org",
+        "resurrector_enabled": "true"
+      }' \
+      --iaas-configuration '{
+        "subscription_id": "'"`terraform output subscription_id`"'",
+        "tenant_id": "'"`terraform output tenant_id`"'",
+        "client_id": "'"`terraform output client_id`"'",
+        "client_secret": "'"${CLIENT_SECRET}"'",
+        "resource_group_name": "'"`terraform output pcf_resource_group_name`"'",
+        "bosh_storage_account_name": "'"`terraform output bosh_root_storage_account`"'",
+        "ssh_public_key": "'"`terraform output ops_manager_ssh_public_key`"'",
+        "ssh_private_key": '"`terraform output -json ops_manager_ssh_private_key | jq .value`"'
+}' \
+      --network-configuration '{
+        "icmp_checks_enabled": false,
+        "networks": [
+          {
+            "name": "Management",
+            "subnets": [
+              {
+                "iaas_identifier": "'"`terraform output network_name`"'"/"'"`terraform output management_subnet_name`"'",
+                "cidr": "'"`terraform output management_subnet_cidrs`"'",
+                "reserved_ip_ranges": "'"`terraform output management_subnet_cidrs | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1"-"$1,$2,$3,$4+9}'`"'",
+                "dns": "168.63.129.16",
+                "gateway": "'"`terraform output management_subnet_cidrs | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1}'`"'"
+              }
+            ]
+          },
+          {
+            "name": "PAS",
+            "subnets": [
+              {
+                "iaas_identifier": "'"`terraform output network_name`"'"/"'"`terraform output pas_subnet_name`"'",
+                "cidr": "'"`terraform output pas_subnet_cidrs`"'",
+                "reserved_ip_ranges": "'"`terraform output pas_subnet_cidrs | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1"-"$1,$2,$3,$4+9}'`"'",
+                "dns": "168.63.129.16",
+                "gateway": "'"`terraform output pas_subnet_cidrs | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1}'`"'"
+              }
+            ]
+          },
+          {
+            "name": "Services",
+            "service_network": true,
+            "subnets": [
+              {
+                "iaas_identifier": "'"`terraform output network_name`"'"/"'"`terraform output services_subnet_name`"'",
+                "cidr": "'"`terraform output services_subnet_name`"'",
+                "reserved_ip_ranges": "'"`terraform output services_subnet_name | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1"-"$1,$2,$3,$4+9}'`"'",
+                "dns": "168.63.129.16",
+                "gateway": "'"`terraform output services_subnet_name | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1}'`"'"
+              }            
+            ]
+          }
+        ]
+      }' \
+
+
+```
 
 Set the properties for "Director Config" as follows:
 
@@ -403,9 +463,9 @@ Create new network for "Management"
 
 Name: Management
 
-NETWORK_NAME --> `terraform output | grep network_name`
-SUBNET_NAME --> `terraform output | grep management_subnet_name`
-CIDR --> `terraform output | grep management_subnet_cidrs` (might not show due to grep, scan output if this is the case)
+NETWORK_NAME --> `terraform output network_name`
+SUBNET_NAME --> `terraform output management_subnet_name`
+CIDR --> `terraform output management_subnet_cidrs` (might not show due to grep, scan output if this is the case)
 
 Azure Network Name: NETWORK_NAME/SUBNET_NAME
 CIDR: from above
