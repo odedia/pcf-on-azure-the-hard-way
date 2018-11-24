@@ -11,11 +11,11 @@ Install Azure CLI from https://docs.microsoft.com/en-us/cli/azure/install-azure-
 
 `az account list` Verifies local cache of credentials
 
-`az group create --name pcf-azure --location eastus`
+`az group create --name azure --location eastus`
 
 ```
 az vm create   \
---resource-group pcf-azure   \
+--resource-group azure   \
 --name jumpbox   \
 --image UbuntuLTS   \
 --admin-username azureuser   \
