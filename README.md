@@ -21,7 +21,7 @@ az vm create   \
 --admin-username azureuser   \
 --data-disk-sizes-gb 200   \
 --generate-ssh-keys   \
---vnet-address-prefix 10.0.15.0/16 \
+--vnet-address-prefix 10.0.15.0/24 \
 --subnet-address-prefix 10.0.15.0/24 \
 --private-ip-address 10.0.15.4  
 ```
