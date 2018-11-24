@@ -379,7 +379,7 @@ om \
   --skip-ssl-validation \
     configure-authentication \
       --username admin \
-      --password $CLIENT_SECRET \
+      --password $PCF_OPSMAN_ADMIN_PASSWD \
       --decryption-passphrase $DECRYPT_PHRASE
 
 ```
@@ -390,7 +390,7 @@ Set the properties under "Azure Config" as follows:
 
 ```
 
-om --target https://$PCF_OPSMAN_FQDN --skip-ssl-validation --username admin --password $CLIENT_SECRET \
+om --target https://$PCF_OPSMAN_FQDN --skip-ssl-validation --username admin --password $PCF_OPSMAN_ADMIN_PASSWD \
     configure-director \
       --director-configuration '{
         "ntp_servers_string": "us.pool.ntp.org",
@@ -455,10 +455,12 @@ om --target https://$PCF_OPSMAN_FQDN --skip-ssl-validation --username admin --pa
   }
 }' \
 --resource-configuration '{
-  "instances": "8"
+  "compilation" : {
+    "instances": 8
+  }
 }'
 
-
+om --target https://$PCF_OPSMAN_FQDN --skip-ssl-validation --username admin --password $PCF_OPSMAN_ADMIN_PASSWD apply-changes
 ```
 
 Set the properties for "Director Config" as follows:
