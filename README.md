@@ -520,9 +520,9 @@ sudo sh -c \
 
 ```
 
+Verify connectivity:
 
-This will allow you to communicate with the BOSH director that is now being deployed.
+```
+bosh env
+```
 
-After "Installing BOSH" section in Ops Manager is done, you can try to get the environment details:
-
-`bosh env`
