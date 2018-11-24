@@ -405,49 +405,58 @@ om --target https://$PCF_OPSMAN_FQDN --skip-ssl-validation --username admin --pa
         "bosh_storage_account_name": "'"`terraform output bosh_root_storage_account`"'",
         "ssh_public_key": "'"`terraform output ops_manager_ssh_public_key`"'",
         "ssh_private_key": '"`terraform output -json ops_manager_ssh_private_key | jq .value`"'
-}' \
-      --network-configuration '{
-        "icmp_checks_enabled": false,
-        "networks": [
+      }' \
+      --networks-configuration "{
+        \"icmp_checks_enabled\": false,
+        \"networks\": [
           {
-            "name": "Management",
-            "subnets": [
+            \"name\": \"Management\",
+            \"subnets\": [
               {
-                "iaas_identifier": "'"`terraform output network_name`"'"/"'"`terraform output management_subnet_name`"'",
-                "cidr": "'"`terraform output management_subnet_cidrs`"'",
-                "reserved_ip_ranges": "'"`terraform output management_subnet_cidrs | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1"-"$1,$2,$3,$4+9}'`"'",
-                "dns": "168.63.129.16",
-                "gateway": "'"`terraform output management_subnet_cidrs | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1}'`"'"
+                \"iaas_identifier\": "\""`terraform output network_name`/`terraform output management_subnet_name`"\"",
+                \"cidr\": "\""`terraform output management_subnet_cidrs`"\"",
+                \"reserved_ip_ranges\": "\""`terraform output management_subnet_cidrs | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1"-"$1,$2,$3,$4+9}'`"\"",
+                \"dns\": \"168.63.129.16\",
+                \"gateway\": "\""`terraform output management_subnet_cidrs | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1}'`"\""
               }
             ]
           },
           {
-            "name": "PAS",
-            "subnets": [
+            \"name\": \"PAS\",
+            \"subnets\": [
               {
-                "iaas_identifier": "'"`terraform output network_name`"'"/"'"`terraform output pas_subnet_name`"'",
-                "cidr": "'"`terraform output pas_subnet_cidrs`"'",
-                "reserved_ip_ranges": "'"`terraform output pas_subnet_cidrs | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1"-"$1,$2,$3,$4+9}'`"'",
-                "dns": "168.63.129.16",
-                "gateway": "'"`terraform output pas_subnet_cidrs | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1}'`"'"
+                \"iaas_identifier\": "\""`terraform output network_name`/`terraform output pas_subnet_name`"\"",
+                \"cidr\": "\""`terraform output pas_subnet_cidrs`"\"",
+                \"reserved_ip_ranges\": "\""`terraform output pas_subnet_cidrs | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1"-"$1,$2,$3,$4+9}'`"\"",
+                \"dns\": \"168.63.129.16\",
+                \"gateway\": "\""`terraform output pas_subnet_cidrs | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1}'`"\""
               }
             ]
           },
           {
-            "name": "Services",
-            "service_network": true,
-            "subnets": [
+            \"name\": \"Services\",
+            \"service_network\": true,
+            \"subnets\": [
               {
-                "iaas_identifier": "'"`terraform output network_name`"'"/"'"`terraform output services_subnet_name`"'",
-                "cidr": "'"`terraform output services_subnet_name`"'",
-                "reserved_ip_ranges": "'"`terraform output services_subnet_name | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1"-"$1,$2,$3,$4+9}'`"'",
-                "dns": "168.63.129.16",
-                "gateway": "'"`terraform output services_subnet_name | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1}'`"'"
+                \"iaas_identifier\": "\""`terraform output network_name`/`terraform output services_subnet_name`"\"",
+                \"cidr\": "\""`terraform output services_subnet_cidrs`"\"",
+                \"reserved_ip_ranges\": "\""`terraform output services_subnet_cidrs | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1"-"$1,$2,$3,$4+9}'`"\"",
+                \"dns\": \"168.63.129.16\",
+                \"gateway\": "\""`terraform output services_subnet_cidrs | awk -F . 'BEGIN {OFS="."} {print $1,$2,$3,$4+1}'`"\""
               }            
             ]
-          }
-        ]
-      }' \
+      }
+
+    ]  
+}" \
+--network-assignment '{
+  "network": {
+    "name" : "Management"
+  }
+}' \
+--resource-configuration '{
+  "instances": "8"
+}'
 
 
 ```
