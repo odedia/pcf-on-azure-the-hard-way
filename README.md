@@ -118,6 +118,8 @@ PCF_OPSMAN_FQDN=pcf.${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}
 USER_ID=<user> #change to match your user (odedia for example), this is for unique service account name creation
 CLIENT_SECRET=<choose secure password>
 DECRYPT_PHRASE=<choose secure key and save it safely! Your env is dead without this key!>
+CREDHUB_KEY=<choose a secure key over 21 characters long>
+NOTIFICATIONS_EMAIL=<your email>
 ```
 source the .env file and add to the env of .bashrc:
 ```
@@ -608,4 +610,236 @@ curl \
   ${URL}
 ```
 
+Upload the tile:
 
+```
+om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  upload-product \
+    --product ${FILENAME}
+```
+
+Stage the tile:
+
+```
+PRODUCTS=$(om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  available-products \
+    --format json)
+
+VERSION=$(echo ${PRODUCTS} |\
+  jq -r 'map(select(.name == "'cf'")) | first | .version')
+
+om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  stage-product \
+    --product-name "cf" \
+    --product-version ${VERSION}
+```
+
+Get Staged product GUID:
+
+```
+STAGED_PRODUCTS=$(om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  curl \
+    --path /api/v0/staged/products)
+
+PRODUCT_GUID=$(echo ${STAGED_PRODUCTS} |\
+  jq -r 'map(select(.type == "'cf'")) | first | .guid')
+```
+
+Find configurable properties:
+
+```
+PROPERTIES=$(om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  curl \
+    --path /api/v0/staged/products/${PRODUCT_GUID}/properties)
+    
+```
+
+
+```
+NETWORK_SETTINGS_JSON=$(cat <<-EOF
+{
+  "singleton_availability_zone": {
+    "name": "null"
+  },
+  "other_availability_zones": [
+    {
+      "name": "null"
+    }
+  ],
+  "network": {
+    "name": "PAS"
+  }
+}
+EOF
+)
+
+om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  configure-product \
+    --product-name "cf" \
+    --product-network "${NETWORK_SETTINGS_JSON}"
+
+CERT_PEM=$(cat ~/${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}.cert | awk '{printf "%s\\r\\n", $0}')
+KEY_PEM=$(cat ~/${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}.key | awk '{printf "%s\\r\\n", $0}')
+
+
+PROPERTIES_JSON=$(cat <<-EOF
+  {
+   ".cloud_controller.system_domain": {
+     "value": "sys.${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}"
+   },
+   ".cloud_controller.apps_domain": {
+     "value": "apps.${PCF_SUBDOMAIN_NAME}.${PCF_DOMAIN_NAME}"
+   },
+   ".properties.haproxy_forward_tls": {
+     "value": "disable"
+   },
+   ".ha_proxy.skip_cert_verify": {
+      "value": true
+   },
+   ".properties.security_acknowledgement": {
+      "value": "X"
+   },
+   ".uaa.service_provider_key_credentials": {
+      "value": {
+        "private_key_pem": "${KEY_PEM}",
+        "cert_pem": "${CERT_PEM}"
+      }
+   },
+   ".properties.networking_poe_ssl_certs": {
+      "value": [
+        {
+          "name": "default",
+          "certificate": {
+              "private_key_pem": "${KEY_PEM}",
+              "cert_pem": "${CERT_PEM}"
+          }
+        }
+      ]
+    },
+    ".properties.credhub_key_encryption_passwords": {
+      "value": [
+        {
+          "name": "default",
+          "provider": "internal",
+          "key": {
+            "secret": "${CREDHUB_KEY}"
+          },
+          "primary": true
+        }
+      ] 
+    },
+    ".mysql_monitor.recipient_email": {
+      "value": "${NOTIFICATIONS_EMAIL}"
+    }
+  }
+EOF
+)
+
+om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  configure-product \
+    --product-name "cf" \
+    --product-properties "${PROPERTIES_JSON}"
+```
+
+Configure the resource jobs:
+
+```
+cd ./pivotal-cf-terraforming-azure-*/
+cd terraforming-pas
+
+JOBS_PROPERTIES=$(om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  curl \
+    --path /api/v0/staged/products/${PRODUCT_GUID}/jobs)
+    
+JOB_GUID=`echo $JOBS_PROPERTIES | jq -r '.jobs[] | select(.name =="router")|.guid'`
+
+
+om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  curl \
+    --path /api/v0/staged/products/${PRODUCT_GUID}/jobs/${JOB_GUID}/resource_config \
+    -x PUT -d '{
+          "instances": 1,
+          "instance_type": {
+            "id": "automatic"
+          },
+          "elb_names": ["'"${WEB_LB}"'"]
+        }'
+
+
+TCP_LB=`terraform output tcp_lb_name`
+JOB_GUID=`echo $JOBS_PROPERTIES | jq -r '.jobs[] | select(.name =="tcp_router")|.guid'`
+
+om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  curl \
+    --path /api/v0/staged/products/${PRODUCT_GUID}/jobs/${JOB_GUID}/resource_config \
+    -x PUT -d '{
+          "instances": 1,
+          "persistent_disk": {
+            "size_mb": "automatic"
+          },
+          "instance_type": {
+            "id": "automatic"
+          },
+          "elb_names": ["'"${TCP_LB}"'"]
+        }'
+        
+        
+DIEGO_LB=`terraform output diego_ssh_lb_name`
+JOB_GUID=`echo $JOBS_PROPERTIES | jq -r '.jobs[] | select(.name =="control")|.guid'`
+
+om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  curl \
+    --path /api/v0/staged/products/${PRODUCT_GUID}/jobs/${JOB_GUID}/resource_config \
+    -x PUT -d '{
+          "instances": 1,
+          "instance_type": {
+            "id": "automatic"
+          },
+          "elb_names": ["'"${DIEGO_LB}"'"]
+        }'
+        
+om --target https://$PCF_OPSMAN_FQDN --skip-ssl-validation --username admin --password $PCF_OPSMAN_ADMIN_PASSWD apply-changes
