@@ -868,6 +868,9 @@ Some tasks might output information about the Cloud Provider Interface (CPI):
 bosh task 20 --cpi
 ```
 
+Everything below is still a work in progress...
+----------
+
 Installing MySQL
 --------
 
