@@ -1,6 +1,6 @@
-# PCF on Azure installation instructions using nothing but the command line
+# PCF on Azure the hard way -  installation instructions using nothing but the command line
 
-Installation instructions for PCF on Azure without any UI interaction (well... you might have to authenticate your azure account)
+Installation instructions for PCF on Azure without any UI interaction (well... you might have to authenticate your azure account). For standard evaluation purposes, use the PCF on Azure marketplace for a one-click installation. if you want to geek out ir get the habdle on how thingd are working, read on  
 
 Install Azure CLI from https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
