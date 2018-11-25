@@ -868,5 +868,309 @@ Some tasks might output information about the Cloud Provider Interface (CPI):
 bosh task 20 --cpi
 ```
 
+Installing MySQL
+--------
+
+PRODUCT_SLUG="pivotal-mysql"
+RELEASE_ID="latest"
+```
+Authenticate with Pivnet:
+
+```
+AUTHENTICATION_RESPONSE=$(curl \
+  --fail \
+  --data "{\"refresh_token\": \"${PCF_PIVNET_UAA_TOKEN}\"}" \
+  https://network.pivotal.io/api/v2/authentication/access_tokens)
+```
+
+Get the access token:
+
+`PIVNET_ACCESS_TOKEN=$(echo ${AUTHENTICATION_RESPONSE} | jq -r '.access_token')`
+
+Get the release JSON for the PAS version you want to install:
+
+```
+  RELEASE_JSON=$(curl \
+    --fail \
+    "https://network.pivotal.io/api/v2/products/${PRODUCT_SLUG}/releases/${RELEASE_ID}")
+```
+
+Accept EULA:
+
+```
+EULA_ACCEPTANCE_URL=$(echo ${RELEASE_JSON} |\
+  jq -r '._links.eula_acceptance.href')
+
+curl \
+  --fail \
+  --header "Authorization: Bearer ${PIVNET_ACCESS_TOKEN}" \
+  --request POST \
+  ${EULA_ACCEPTANCE_URL}
+
+```
+
+Extract the download URL:
+
+```
+DOWNLOAD_ELEMENT=$(echo ${RELEASE_JSON} |\
+  jq -r '.product_files[] | select(.aws_object_key | contains(".pivotal"))')
+
+FILENAME=$(echo ${DOWNLOAD_ELEMENT} |\
+  jq -r '.aws_object_key | split("/") | last')
+
+URL=$(echo ${DOWNLOAD_ELEMENT} |\
+  jq -r '._links.download.href')
+
+curl \
+  --fail \
+  --location \
+  --output ${FILENAME} \
+  --header "Authorization: Bearer ${PIVNET_ACCESS_TOKEN}" \
+  ${URL}
+```
+
+Upload the tile:
+
+```
+om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  upload-product \
+    --product ${FILENAME}
+```
+
+Stage the tile:
+
+```
+PRODUCTS=$(om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  available-products \
+    --format json)
+
+VERSION=$(echo ${PRODUCTS} |\
+  jq -r 'map(select(.name == "'pivotal-mysql'")) | first | .version')
+
+om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  stage-product \
+    --product-name "pivotal-mysql" \
+    --product-version ${VERSION}
+```
+
+Get Staged product GUID:
+
+```
+STAGED_PRODUCTS=$(om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  curl \
+    --path /api/v0/staged/products)
+
+PRODUCT_GUID=$(echo ${STAGED_PRODUCTS} |\
+  jq -r 'map(select(.type == "'pivotal-mysql'")) | first | .guid')
+```
+
+
+
+Installing Redis
+--------
+Get the release JSON for the PAS version you want to install:
+
+```
+  RELEASE_JSON=$(curl \
+    --fail \
+    "https://network.pivotal.io/api/v2/products/p-redis/releases/latest")
+```
+
+Accept EULA:
+
+```
+EULA_ACCEPTANCE_URL=$(echo ${RELEASE_JSON} |\
+  jq -r '._links.eula_acceptance.href')
+
+curl \
+  --fail \
+  --header "Authorization: Bearer ${PIVNET_ACCESS_TOKEN}" \
+  --request POST \
+  ${EULA_ACCEPTANCE_URL}
+
+```
+
+Extract the download URL:
+
+```
+DOWNLOAD_ELEMENT=$(echo ${RELEASE_JSON} |\
+  jq -r '.product_files[] | select(.aws_object_key | contains(".pivotal"))')
+
+FILENAME=$(echo ${DOWNLOAD_ELEMENT} |\
+  jq -r '.aws_object_key | split("/") | last')
+
+URL=$(echo ${DOWNLOAD_ELEMENT} |\
+  jq -r '._links.download.href')
+
+curl \
+  --fail \
+  --location \
+  --output ${FILENAME} \
+  --header "Authorization: Bearer ${PIVNET_ACCESS_TOKEN}" \
+  ${URL}
+```
+
+Upload the tile:
+
+```
+om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  upload-product \
+    --product ${FILENAME}
+```
+
+Stage the tile:
+
+```
+PRODUCTS=$(om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  available-products \
+    --format json)
+
+VERSION=$(echo ${PRODUCTS} |\
+  jq -r 'map(select(.name == "'p-redis'")) | first | .version')
+
+om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  stage-product \
+    --product-name "p-redis" \
+    --product-version ${VERSION}
+```
+
+Get Staged product GUID:
+
+```
+STAGED_PRODUCTS=$(om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  curl \
+    --path /api/v0/staged/products)
+
+PRODUCT_GUID=$(echo ${STAGED_PRODUCTS} |\
+  jq -r 'map(select(.type == "'p-healthwatch'")) | first | .guid')
+
+
+Installing Healthwatch
+--------
+
+Get the release JSON for the PAS version you want to install:
+
+```
+  RELEASE_JSON=$(curl \
+    --fail \
+    "https://network.pivotal.io/api/v2/products/p-healthwatch/releases/latest")
+```
+
+Accept EULA:
+
+```
+EULA_ACCEPTANCE_URL=$(echo ${RELEASE_JSON} |\
+  jq -r '._links.eula_acceptance.href')
+
+curl \
+  --fail \
+  --header "Authorization: Bearer ${PIVNET_ACCESS_TOKEN}" \
+  --request POST \
+  ${EULA_ACCEPTANCE_URL}
+
+```
+
+Extract the download URL:
+
+```
+DOWNLOAD_ELEMENT=$(echo ${RELEASE_JSON} |\
+  jq -r '.product_files[] | select(.aws_object_key | contains(".pivotal"))')
+
+FILENAME=$(echo ${DOWNLOAD_ELEMENT} |\
+  jq -r '.aws_object_key | split("/") | last')
+
+URL=$(echo ${DOWNLOAD_ELEMENT} |\
+  jq -r '._links.download.href')
+
+curl \
+  --fail \
+  --location \
+  --output ${FILENAME} \
+  --header "Authorization: Bearer ${PIVNET_ACCESS_TOKEN}" \
+  ${URL}
+```
+
+Upload the tile:
+
+```
+om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  upload-product \
+    --product ${FILENAME}
+```
+
+Stage the tile:
+
+```
+PRODUCTS=$(om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  available-products \
+    --format json)
+
+VERSION=$(echo ${PRODUCTS} |\
+  jq -r 'map(select(.name == "'p-healthwatch'")) | first | .version')
+
+om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  stage-product \
+    --product-name "p-healthwatch" \
+    --product-version ${VERSION}
+```
+
+Get Staged product GUID:
+
+```
+STAGED_PRODUCTS=$(om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  curl \
+    --path /api/v0/staged/products)
+
+PRODUCT_GUID=$(echo ${STAGED_PRODUCTS} |\
+  jq -r 'map(select(.type == "'p-healthwatch'")) | first | .guid')
+
 
 
