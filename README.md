@@ -26,11 +26,11 @@ Create resource group:
 
 Create jumpbox VM
 ```
-az vm create   \
+JUMPBOX=az vm create   \
 --resource-group azure   \
 --name jumpbox   \
 --image UbuntuLTS   \
---admin-username azureuser   \
+--admin-username ubuntu   \
 --data-disk-sizes-gb 200   \
 --generate-ssh-keys   \
 --vnet-address-prefix 192.168.0.0/16 \
@@ -44,10 +44,9 @@ Verify:
 This one is a bit ridicilous but the only way I found to ssh dynamically into the jumpbox (pull-request a better way, please!):
   
 ```
-ssh azureuser@`az vm list-ip-addresses \
-               -n jumpbox \
-               --query [0].virtualMachine.network.publicIpAddresses[0].ipAddress \
-               -o tsv`
+JUMPBOX_IP=$(echo ${JUMPBOX} |\
+jq -r '.publicIpAddress')
+ssh ubuntu@${JUMPBOX_IP}
 ```
 
 Tip: if you want to connect from another machine, you will need to copy the ssh keys from the original machine to the new machine. The keys must be protected with 0600 unix permissions:
