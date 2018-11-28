@@ -1173,6 +1173,10 @@ STAGED_PRODUCTS=$(om \
 
 PRODUCT_GUID=$(echo ${STAGED_PRODUCTS} |\
   jq -r 'map(select(.type == "'p-healthwatch'")) | first | .guid')
+```
 
 
+Acknoledgements:
+Some commands taken from https://github.com/amcginlay/bosh-topics. Much thanks to Alan McGinlay for training and guidance!
+Additional pull requests from Karsten Bott https://github.com/bottkars
 
