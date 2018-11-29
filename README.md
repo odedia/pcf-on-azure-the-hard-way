@@ -490,7 +490,7 @@ az network vnet peering create --name opsman-peering --remote-vnet jumpboxVNET -
 ```
 
 Generate the BOSH environment variables: 
-(Put BOSH environment variables in the ./env file so you don't have to run it again if you get disconnected)
+(Put BOSH environment variables in the ~/.env file so you don't have to run it again if you get disconnected)
 ```
 echo "$( \
   om \
