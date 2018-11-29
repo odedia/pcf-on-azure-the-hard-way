@@ -489,9 +489,10 @@ az network vnet peering create --name opsman-peering --remote-vnet jumpboxVNET -
 
 ```
 
-Export the BOSH environment variables:
+Generate the BOSH environment variables: 
+(Put BOSH environment variables in the ~/.env file so you don't have to run it again if you get disconnected)
 ```
-export $( \
+echo "export $( \
   om \
     --skip-ssl-validation \
     --target ${PCF_OPSMAN_FQDN} \
@@ -501,7 +502,9 @@ export $( \
       --silent \
       --path /api/v0/deployed/director/credentials/bosh_commandline_credentials | \
         jq --raw-output '.credential' \
-)
+)" >> ~/.env
+
+source ~/.env
 ```
 Copy the root certificate to the jumpbox:
 
@@ -787,6 +790,7 @@ JOBS_PROPERTIES=$(om \
   curl \
     --path /api/v0/staged/products/${PRODUCT_GUID}/jobs)
     
+WEB_LB=`terraform output web_lb_name`   
 JOB_GUID=`echo $JOBS_PROPERTIES | jq -r '.jobs[] | select(.name =="router")|.guid'`
 
 
@@ -802,7 +806,7 @@ om \
           "instance_type": {
             "id": "automatic"
           },
-          "elb_names": ["'"${WEB_LB}"'"]
+          "elb_names": ['"${WEB_LB}"']
         }'
 
 
