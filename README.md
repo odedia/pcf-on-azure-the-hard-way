@@ -790,6 +790,7 @@ JOBS_PROPERTIES=$(om \
   curl \
     --path /api/v0/staged/products/${PRODUCT_GUID}/jobs)
     
+WEB_LB=`terraform output web_lb_name`   
 JOB_GUID=`echo $JOBS_PROPERTIES | jq -r '.jobs[] | select(.name =="router")|.guid'`
 
 
