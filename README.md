@@ -492,7 +492,7 @@ az network vnet peering create --name opsman-peering --remote-vnet jumpboxVNET -
 Generate the BOSH environment variables: 
 (Put BOSH environment variables in the ~/.env file so you don't have to run it again if you get disconnected)
 ```
-echo "$( \
+echo "export $( \
   om \
     --skip-ssl-validation \
     --target ${PCF_OPSMAN_FQDN} \
