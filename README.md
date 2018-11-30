@@ -26,7 +26,7 @@ Create resource group:
 
 Create jumpbox VM
 ```
-JUMPBOX=az vm create   \
+az vm create   \
 --resource-group azure   \
 --name jumpbox   \
 --image UbuntuLTS   \
@@ -41,11 +41,13 @@ JUMPBOX=az vm create   \
 Verify:
 `az vm list`
   
-This one is a bit ridicilous but the only way I found to ssh dynamically into the jumpbox (pull-request a better way, please!):
   
 ```
-JUMPBOX_IP=$(echo ${JUMPBOX} |\
-jq -r '.publicIpAddress')
+JUMPBOX_IP=ubuntu@`az vm list-ip-addresses \
+               -n jumpbox \
+               --query [0].virtualMachine.network.publicIpAddresses[0].ipAddress \
+               -o tsv`
+
 ssh ubuntu@${JUMPBOX_IP}
 ```
 
