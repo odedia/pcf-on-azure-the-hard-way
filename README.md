@@ -45,12 +45,10 @@ Verify:
   
   
 ```
-JUMPBOX_IP=ubuntu@`az vm list-ip-addresses \
+ssh ubuntu@`az vm list-ip-addresses \
                -n jumpbox \
                --query [0].virtualMachine.network.publicIpAddresses[0].ipAddress \
                -o tsv`
-
-ssh ubuntu@${JUMPBOX_IP}
 ```
 
 Tip: if you want to connect from another machine, you will need to copy the ssh keys from the original machine to the new machine. The keys must be protected with 0600 unix permissions:
