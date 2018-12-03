@@ -876,6 +876,81 @@ bosh task 20 --cpi
 Everything below is still a work in progress...
 ----------
 
+Installing Stemcell for PAS
+------------
+
+```
+PRODUCT_SLUG="stemcells-ubuntu-xenial"
+RELEASE_ID="latest"
+```
+Authenticate with Pivnet:
+
+```
+AUTHENTICATION_RESPONSE=$(curl \
+  --fail \
+  --data "{\"refresh_token\": \"${PCF_PIVNET_UAA_TOKEN}\"}" \
+  https://network.pivotal.io/api/v2/authentication/access_tokens)
+```
+
+Get the access token:
+
+`PIVNET_ACCESS_TOKEN=$(echo ${AUTHENTICATION_RESPONSE} | jq -r '.access_token')`
+
+Get the release JSON for the PAS version you want to install:
+
+```
+  RELEASE_JSON=$(curl \
+    --fail \
+    "https://network.pivotal.io/api/v2/products/${PRODUCT_SLUG}/releases/${RELEASE_ID}")
+```
+
+Accept EULA:
+
+```
+EULA_ACCEPTANCE_URL=$(echo ${RELEASE_JSON} |\
+  jq -r '._links.eula_acceptance.href')
+
+curl \
+  --fail \
+  --header "Authorization: Bearer ${PIVNET_ACCESS_TOKEN}" \
+  --request POST \
+  ${EULA_ACCEPTANCE_URL}
+
+```
+
+Extract the download URL:
+
+```
+DOWNLOAD_ELEMENT=$(echo ${RELEASE_JSON} |\
+  jq -r '.product_files[] | select(.aws_object_key | contains("azure-hyperv-ubuntu-xenial-go_agent.tgz"))')
+
+FILENAME=$(echo ${DOWNLOAD_ELEMENT} |\
+  jq -r '.aws_object_key | split("/") | last')
+
+URL=$(echo ${DOWNLOAD_ELEMENT} |\
+  jq -r '._links.download.href')
+
+curl \
+  --fail \
+  --location \
+  --output ${FILENAME} \
+  --header "Authorization: Bearer ${PIVNET_ACCESS_TOKEN}" \
+  ${URL}
+```
+
+Upload the stemcell:
+
+```
+om \
+  --username admin \
+  --password ${PCF_OPSMAN_ADMIN_PASSWD} \
+  --target ${PCF_OPSMAN_FQDN} \
+  --skip-ssl-validation \
+  upload-stemcell \
+    --stemcell ${FILENAME}
+```
+
+
 Installing MySQL
 --------
 ```
