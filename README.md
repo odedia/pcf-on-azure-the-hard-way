@@ -1085,7 +1085,7 @@ STAGED_PRODUCTS=$(om \
 
 PRODUCT_GUID=$(echo ${STAGED_PRODUCTS} |\
   jq -r 'map(select(.type == "'p-healthwatch'")) | first | .guid')
-
+```
 
 Installing Healthwatch
 --------
