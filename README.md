@@ -880,7 +880,7 @@ Everything below is still a work in progress...
 
 Installing MySQL
 --------
-
+```
 PRODUCT_SLUG="pivotal-mysql"
 RELEASE_ID="latest"
 ```
