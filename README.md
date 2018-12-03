@@ -18,11 +18,13 @@ Verify local cache of credentials
 `az account list` 
 
 Choose a location. I'll use eastus in the examples below.
-LOCATION=eastus
 
 Create resource group:
 
-`az group create --name azure --location $LOCATION`
+```
+LOCATION=eastus
+az group create --name azure --location $LOCATION
+```
 
 Create jumpbox VM
 ```
